@@ -2,87 +2,122 @@
 
 ## Context
 
-Working parents of babies aged 0–24 months have little time with their child and want that time to count: activities the baby enjoys that also support development. Today a parent has to work out what suits each age, keeps no record of what they did, and can't easily see how the baby is progressing.
+Working parents of babies aged 0–24 months have little time with their child and want that time to count. The app gives them a **daily checklist of play games** suited to the baby's age in days. The parent plays each game with the baby, ticks it off, and answers a quick "what did your baby do?" question. Those answers, plus growth measurements, are how the app monitors the baby's development.
 
-The app knows the baby's age in days and gives the parent a **daily checklist of play games** for that age. The parent plays the games, ticks them off, and answers a quick "what did your baby do?" question for each one. Those answers, plus regular growth measurements, are how the app monitors the baby's development over time. Building starts once the design system is provided.
+## What the app can and can't claim
 
-## A constraint the app has to respect
+Play does not measurably change weight or length; feeding, sleep and health do. So the app tracks two things separately and never says a game caused growth:
+- **Milestones**: skills the parent sees, from the CDC checklists for 2, 4, 6, 9, 12, 15, 18 and 24 months.
+- **Growth**: weight, length and head size plotted on the WHO charts for 0–24 months.
 
-Play activities do not measurably drive weight or length; feeding, sleep and health do. So the app tracks two separate signals and never claims a game caused growth:
-
-- **Developmental milestones**: observed skills, from the CDC "Learn the Signs. Act Early." checklists (2022 revision: 2, 4, 6, 9, 12, 15, 18, 24 months).
-- **Physical growth**: weight, length and head circumference against the WHO Child Growth Standards percentiles (the standard for 0–24 months).
-
-Each game is tagged with the area it exercises (motor, language, cognitive, social-emotional) and linked to the milestones it lets the parent observe. Playing is how the parent *sees* development happen; the app records what they saw. If an expected milestone is still unmarked after its age, the app shows a gentle prompt to mention it at the next check-up. It gives no scores and no "behind" labels, and it is not a medical tool.
+If a milestone hasn't been seen by the expected age, the app gently suggests mentioning it at the next check-up. It gives no scores and it is not a medical tool.
 
 ## MVP features
 
-1. **Baby profile**: name, date of birth, sex (the WHO charts need it), weeks of gestation if born early (for corrected age), optional photo. More than one baby is supported.
-2. **Today's game checklist**: header like "Day 142 · 4 months 20 days", then a checklist of 4–6 games (3–10 minutes each, about 20–30 minutes in total) covering all four areas, with a progress bar ("3 of 5 done"). The parent can swap a game or add one from the library.
-3. **Playing a game**: open a game → steps, materials, safety note → play → tick it done. Then log:
-   - the baby's reaction (loved / okay / not interested)
-   - 1–2 "watch for" questions linked to milestones, e.g. *"Did she follow the rattle with her eyes from side to side?"* → Yes / Not yet / Didn't try
-   - optional note or photo
-4. **Game library**: all games grouped by age band and area, with filters, favourites and custom games.
-5. **Milestone tracker**: an age-grouped checklist fed by the game answers. When a "watch for" answer is Yes, the linked milestone is marked seen with that date (the parent can also mark or unmark it by hand). The screen shows what is typical now and what comes next.
-6. **Growth log**: enter measurements and see them plotted on WHO percentile curves.
-7. **Progress**: checklist completion per day, streak, minutes played this week, games per area (which shows gaps), milestones seen, growth trend, and a timeline of notes and photos.
-8. **Daily reminder**: a local notification at a time the parent chooses.
+1. **Baby profile**: name, date of birth, sex (needed for the WHO charts), weeks of pregnancy if born early, photo. More than one baby is allowed.
+2. **Today's game checklist**: "Day 142 · 4 months 20 days", then 4–6 games of 3–10 minutes each (20–30 minutes in total) covering movement, language, thinking and social-emotional skills. A progress bar shows "3 of 5 done". The parent can swap a game or add one.
+3. **Playing a game**: steps, materials and a safety note, then tick it done. After each game the parent logs:
+   - the baby's reaction: loved / okay / not interested
+   - 1–2 "watch for" questions, e.g. *"Did she follow the rattle with her eyes?"*: Yes / Not yet / Didn't try
+   - an optional note or photo
+4. **Game library**: games by age and area, with filters, favourites and custom games.
+5. **Milestones**: a Yes on a "watch for" question marks the linked milestone as seen on that date. The parent can also mark or unmark milestones by hand.
+6. **Growth log**: measurements plotted on the WHO percentile charts.
+7. **Progress**: how often the checklist was finished, streak, minutes played, games per area (so gaps show), milestones seen, growth trend, and a timeline of notes.
+8. **Daily reminder** at a time the parent chooses (see the web limit below).
 
-Later phases: cloud sync and two parents sharing one baby; a PDF summary for pediatrician visits; smarter suggestions (a shorter checklist when the parent says "I have 10 minutes"; rotating neglected areas).
+Later: syncing between two parents, a PDF summary for doctor visits, and a "10-minute" short checklist.
 
 ## Core logic
 
-- `ageDays = today − dob`. If gestation < 37 weeks: `correctedAgeDays = ageDays − (40 − gestationWeeks) × 7`. Use corrected age for games, milestones and charts until 24 months.
-- Age bands for games: 0–1, 1–2, 2–3, 3–4, 4–6, 6–9, 9–12, 12–15, 15–18, 18–24 months.
-- **Daily checklist:** generated once per day from the current band, with at least one game per area. Yesterday's games are not repeated. Games the baby "loved" come back more often, and games tied to milestones not yet seen are included more often.
-- **Milestone from play:** a Yes on a "watch for" question marks the linked milestone as seen on that date. "Not yet" is stored but never shown as a failure.
+- `ageDays = today − dob`. If born before 37 weeks: `correctedAgeDays = ageDays − (40 − gestationWeeks) × 7`. Corrected age is used until 24 months.
+- Age bands: 0–1, 1–2, 2–3, 3–4, 4–6, 6–9, 9–12, 12–15, 15–18, 18–24 months.
+- **Daily checklist rules:**
+  - at least one game per area
+  - no repeats from yesterday
+  - games the baby loved come back more often
+  - games that check milestones not yet seen come up more often
 
 ## Data model
 
 ```
-Baby          id, name, dob, sex, gestationWeeks?, photo?
-Game          id, title, ageMinDays, ageMaxDays, areas[], durationMin,
-              materials[], steps[], benefit, safety, isCustom
-WatchFor      id, gameId, milestoneId, question
+Baby           id, name, dob, sex, gestationWeeks?, photo?
+Game           id, title, ageMinDays, ageMaxDays, areas[], durationMin,
+               materials[], steps[], benefit, safety, isCustom
+WatchFor       id, gameId, milestoneId, question
 DailyChecklist id, babyId, date, gameIds[]
-GameLog       id, babyId, gameId, date, durationMin, reaction, note?, photo?
-WatchAnswer   id, gameLogId, watchForId, answer(yes|not_yet|didnt_try)
-Milestone     id, ageMonths, area, description, source
-MilestoneLog  id, babyId, milestoneId, observedOn, note?
-GrowthEntry   id, babyId, date, weightKg?, lengthCm?, headCm?
-Settings      reminderTime, units
+GameLog        id, babyId, gameId, date, durationMin, reaction, note?, photo?
+WatchAnswer    id, gameLogId, watchForId, answer(yes|not_yet|didnt_try)
+Milestone      id, ageMonths, area, description, source
+MilestoneLog   id, babyId, milestoneId, observedOn, note?
+GrowthEntry    id, babyId, date, weightKg?, lengthCm?, headCm?
+Settings       reminderTime, units
 ```
 
 ## Screens
 
-Onboarding → Today (checklist) · Games · Milestones · Growth · Progress (bottom tabs), plus Game detail/play screen and Settings/baby switcher.
+The bottom tabs are Today · Games · Milestones · Growth · Progress. Other screens:
+- onboarding
+- game play screen
+- settings and baby switcher
 
-## Proposed stack (pending decision on platform)
+## Decisions (confirmed)
 
-- Expo (React Native) + TypeScript: one codebase for iOS, Android and web.
-- Local-first SQLite (`expo-sqlite`) so the MVP works offline and needs no server.
-- `react-native-svg` for the growth charts; `expo-notifications` for reminders.
-- Phase 2 sync: Supabase.
-- Your design system becomes a theme file (colours, type, spacing, components) before any screen is built.
+- **Web only**, mobile-first, installable as a PWA.
+- **One device, no login** in v1. Sharing between parents comes in phase 2.
+- **Design system:** the sbaby design system; its tokens are applied exactly.
+
+## Stack
+
+- **React 18 + Vite + TypeScript**, React Router, laid out for phone screens.
+- **IndexedDB via Dexie**, so data stays in the browser and works offline with no server. Settings will include an export/import JSON backup, because clearing browser data would wipe everything.
+- **PWA** (`vite-plugin-pwa`) so it can be added to the home screen and opened offline.
+- **Charts:** hand-built SVG for the WHO curves, so the percentile bands look exactly as designed.
+- **Tests:** Vitest for the logic; Playwright (Chromium is pre-installed) for the walkthrough.
+- **Theme:** sbaby tokens become CSS variables in `src/theme/tokens.css`. Components use only those variables.
+
+## Honest limit: the daily reminder on the web
+
+A website can't reliably schedule a notification for a set time each day unless there is a push server. The Notification Triggers API was dropped by browsers. So v1 does two things:
+- **"Add to my calendar":** downloads a repeating daily event (.ics) at the time you choose. Your phone's calendar then reminds you.
+- **An in-app banner** when you open the app and today's checklist isn't finished.
+
+Real push reminders need a server, which comes with the phase-2 sync.
 
 ## Content
 
-- Milestones and growth tables come from the public CDC and WHO sources and are cited in the app.
-- I can draft about 100 games (roughly 10 per age band), each with its "watch for" questions. Before public release, a pediatrician or early-childhood specialist should review them.
+- Milestone and growth data come from the public CDC and WHO sources, cited in the app.
+- About 100 games will be drafted, with their "watch for" questions. A pediatrician should review them before public release.
+
+## Project layout
+
+```
+src/
+  theme/tokens.css         sbaby tokens → CSS variables
+  db/schema.ts             Dexie tables (data model above)
+  domain/age.ts            ageDays, corrected age, age band, "4 months 20 days"
+  domain/checklist.ts      daily checklist generation (pure, seeded by date)
+  domain/milestones.ts     Yes answer → MilestoneLog; overdue prompt
+  domain/growth.ts         WHO LMS → percentile/z-score
+  data/games.ts            ~100 games + WatchFor questions
+  data/milestones.ts       CDC 2022 milestones
+  data/who/*.json          WHO LMS tables (weight, length, head; boys/girls; 0–24 m)
+  screens/                 Onboarding, Today, GamePlay, Library, Milestones, Growth, Progress, Settings
+  components/              UI built only from sbaby tokens
+```
 
 ## Build order
 
-1. Scaffold, theme from the design system, navigation shell
-2. Baby profile and age calculation, including corrected age
-3. Game data, daily checklist, play screen and logging
+1. Vite scaffold, sbaby theme, navigation
+2. Baby profile and age maths
+3. Games, daily checklist, play screen, logging
 4. Milestones
-5. Growth log and WHO charts
-6. Progress screen
-7. Daily reminder
+5. Growth charts
+6. Progress
+7. Reminder
 
 ## Verification
 
-- Unit tests for age and corrected-age maths, band selection, checklist generation and WHO percentile lookup
-- Run the app on web and in Expo Go, then walk through onboarding → complete today's checklist → confirm a milestone is marked from a Yes answer → add a growth entry → check Progress
-- Screenshot each screen against the design system
+- Unit tests for age and corrected age, checklist generation, milestone-from-answer logic, and the WHO percentile lookup.
+- `npm run build` passes; run `vite preview` and use Playwright at phone size (390×844) to walk through: onboarding → finish today's checklist → a Yes answer marks a milestone → add growth → check Progress.
+- Screenshot each screen against sbaby.
