@@ -9,6 +9,7 @@ import { deleteBaby, exportBackup, importBackup, setSetting } from '../db/action
 import { formatAge } from '../domain/age';
 import { formatDate, initials } from '../lib/format';
 import { dailyReminderIcs, downloadFile } from '../lib/ics';
+import { IS_ARTIFACT } from '../lib/env';
 import { useSetting, useUnits, type Units } from '../lib/hooks';
 import { MILESTONE_SOURCE } from '../data/milestones';
 import { BabyForm } from './BabyForm';
@@ -21,6 +22,7 @@ export function Settings({ baby, today }: { baby: Baby; today: string }) {
   const reminderTime = useSetting<string | null>('reminderTime', null);
   const [sheet, setSheet] = useState<'edit' | 'add' | null>(null);
   const [message, setMessage] = useState('');
+  const [confirming, setConfirming] = useState<{ kind: 'restore'; file: File } | { kind: 'delete' } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const addToCalendar = () => {
@@ -29,12 +31,21 @@ export function Settings({ baby, today }: { baby: Baby; today: string }) {
   };
 
   const exportData = async () => {
-    downloadFile(`sbaby-backup-${today}.json`, await exportBackup(), 'application/json');
-    setMessage('Backup saved. Keep the file somewhere safe.');
+    const json = await exportBackup();
+    if (!IS_ARTIFACT) {
+      downloadFile(`sbaby-backup-${today}.json`, json, 'application/json');
+      setMessage('Backup saved. Keep the file somewhere safe.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(json);
+      setMessage('Backup copied. Paste it into a note or email and save it as a .json file to restore later.');
+    } catch {
+      setMessage('Copying isn’t allowed here. Open the app from its own website to save a backup.');
+    }
   };
 
   const importData = async (file: File) => {
-    if (!confirm('Restoring replaces everything on this device with the backup. Continue?')) return;
     try {
       await importBackup(await file.text());
       setMessage('Backup restored.');
@@ -44,7 +55,6 @@ export function Settings({ baby, today }: { baby: Baby; today: string }) {
   };
 
   const removeBaby = async () => {
-    if (!confirm(`Delete ${baby.name} and all their games, moments and measurements from this device? This can’t be undone.`)) return;
     await deleteBaby(baby.id);
     navigate('/', { replace: true });
   };
@@ -105,9 +115,11 @@ export function Settings({ baby, today }: { baby: Baby; today: string }) {
               <span>Time</span>
               <input className="input" type="time" value={reminderTime} onChange={(e) => e.target.value && setSetting('reminderTime', e.target.value)} />
             </label>
-            <button type="button" className="btn ghost" onClick={addToCalendar}><CalendarPlus size={18} aria-hidden /> Add to my calendar</button>
+            {!IS_ARTIFACT && <button type="button" className="btn ghost" onClick={addToCalendar}><CalendarPlus size={18} aria-hidden /> Add to my calendar</button>}
             <p className="hint" style={{ margin: 0 }}>
-              Websites can’t send a notification at a set time on their own, so this adds a daily event to your phone’s calendar — your calendar reminds you. The app also shows a banner after this time if today’s games aren’t finished.
+              {IS_ARTIFACT
+                ? 'After this time, the app shows a banner if today’s games aren’t finished. Calendar reminders are available when the app runs from its own website.'
+                : 'Websites can’t send a notification at a set time on their own, so this adds a daily event to your phone’s calendar — your calendar reminds you. The app also shows a banner after this time if today’s games aren’t finished.'}
             </p>
           </>
         )}
@@ -125,10 +137,10 @@ export function Settings({ baby, today }: { baby: Baby; today: string }) {
           <p className="hint" style={{ margin: '4px 0 0' }}>Your data lives only in this browser. Clearing browser data deletes it — save a backup now and then.</p>
         </div>
         <div className="grid-2">
-          <button type="button" className="btn ghost sm" style={{ width: '100%' }} onClick={exportData}><Download size={16} aria-hidden /> Save backup</button>
+          <button type="button" className="btn ghost sm" style={{ width: '100%' }} onClick={exportData}><Download size={16} aria-hidden /> {IS_ARTIFACT ? 'Copy backup' : 'Save backup'}</button>
           <button type="button" className="btn ghost sm" style={{ width: '100%' }} onClick={() => fileRef.current?.click()}><Upload size={16} aria-hidden /> Restore</button>
         </div>
-        <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void importData(f); e.target.value = ''; }} />
+        <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) setConfirming({ kind: 'restore', file: f }); e.target.value = ''; }} />
         {message && <p className="caption" role="status" style={{ margin: 0 }}>{message}</p>}
       </section>
 
@@ -139,7 +151,23 @@ export function Settings({ baby, today }: { baby: Baby; today: string }) {
         <p className="hint" style={{ margin: 0 }}>Play games are ideas for bonding and noticing development. They don’t diagnose anything or cause growth on their own. Talk to your doctor about any worries.</p>
       </section>
 
-      <button type="button" className="btn ghost" onClick={removeBaby} style={{ color: 'var(--coral-deep)' }}><Trash2 size={16} aria-hidden /> Delete {baby.name}</button>
+      <button type="button" className="btn ghost" onClick={() => setConfirming({ kind: 'delete' })} style={{ color: 'var(--coral-deep)' }}><Trash2 size={16} aria-hidden /> Delete {baby.name}</button>
+
+      {confirming && (
+        <Sheet title={confirming.kind === 'delete' ? `Delete ${baby.name}?` : 'Restore backup?'} onClose={() => setConfirming(null)}>
+          <p className="muted" style={{ margin: 0 }}>
+            {confirming.kind === 'delete'
+              ? `This deletes ${baby.name} and all their games, moments and measurements from this device. It can’t be undone.`
+              : 'Restoring replaces everything on this device with the backup.'}
+          </p>
+          <button type="button" className="btn dark" onClick={async () => {
+            const c = confirming;
+            setConfirming(null);
+            if (c.kind === 'delete') await removeBaby(); else await importData(c.file);
+          }}>{confirming.kind === 'delete' ? 'Delete' : 'Restore'}</button>
+          <button type="button" className="btn ghost" onClick={() => setConfirming(null)}>Cancel</button>
+        </Sheet>
+      )}
 
       {sheet && (
         <Sheet title={sheet === 'edit' ? `Edit ${baby.name}` : 'Add a baby'} onClose={() => setSheet(null)}>
