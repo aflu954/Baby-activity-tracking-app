@@ -29,7 +29,7 @@ Each game is tagged with the area it exercises (motor, language, cognitive, soci
 7. **Progress**: checklist completion per day, streak, minutes played this week, games per area (which shows gaps), milestones seen, growth trend, and a timeline of notes and photos.
 8. **Daily reminder**: a local notification at a time the parent chooses.
 
-Later phases: cloud sync and two parents sharing one baby; a PDF summary for pediatrician visits; smarter suggestions ("I have 10 minutes", a shorter checklist when time is short, rotate neglected areas).
+Later phases: cloud sync and two parents sharing one baby; a PDF summary for pediatrician visits; smarter suggestions (a shorter checklist when the parent says "I have 10 minutes"; rotating neglected areas).
 
 ## Core logic
 
