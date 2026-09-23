@@ -121,3 +121,11 @@ src/
 - Unit tests for age and corrected age, checklist generation, milestone-from-answer logic, and the WHO percentile lookup.
 - `npm run build` passes; run `vite preview` and use Playwright at phone size (390×844) to walk through: onboarding → finish today's checklist → a Yes answer marks a milestone → add growth → check Progress.
 - Screenshot each screen against sbaby.
+
+## v1 status
+
+Built and tested. What differs from the plan above:
+- **77 games**, not ~100. Every age band has at least 5 games covering all four areas.
+- **No photos** in game logs yet. Notes only, which keeps backups small and simple.
+- **Icons:** Lucide rounded icons, because the icons in the Sbaby PDF are embedded images.
+- **Thinking area colours:** the PDF has only a blue tint for this area. A blue accent (`#6d9cc9`) and a blue text colour (`#36648f`) were added.
